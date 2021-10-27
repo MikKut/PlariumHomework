@@ -1,0 +1,5 @@
+C:\Users\User\source\newRepos\TaskOOP\Dates\obj\Debug\net5.0\Dates.csproj.AssemblyReference.cache
+C:\Users\User\source\newRepos\TaskOOP\Dates\obj\Debug\net5.0\Dates.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\source\newRepos\TaskOOP\Dates\obj\Debug\net5.0\Dates.AssemblyInfoInputs.cache
+C:\Users\User\source\newRepos\TaskOOP\Dates\obj\Debug\net5.0\Dates.AssemblyInfo.cs
+C:\Users\User\source\newRepos\TaskOOP\Dates\obj\Debug\net5.0\Dates.csproj.CoreCompileInputs.cache
