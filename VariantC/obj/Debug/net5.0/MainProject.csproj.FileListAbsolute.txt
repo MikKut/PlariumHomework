@@ -1,0 +1,16 @@
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\bin\Debug\net5.0\MainProject.exe
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\bin\Debug\net5.0\MainProject.deps.json
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\bin\Debug\net5.0\MainProject.runtimeconfig.json
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\bin\Debug\net5.0\MainProject.runtimeconfig.dev.json
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\bin\Debug\net5.0\MainProject.dll
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\bin\Debug\net5.0\ref\MainProject.dll
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\bin\Debug\net5.0\MainProject.pdb
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\obj\Debug\net5.0\MainProject.csproj.AssemblyReference.cache
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\obj\Debug\net5.0\MainProject.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\obj\Debug\net5.0\MainProject.AssemblyInfoInputs.cache
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\obj\Debug\net5.0\MainProject.AssemblyInfo.cs
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\obj\Debug\net5.0\MainProject.csproj.CoreCompileInputs.cache
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\obj\Debug\net5.0\MainProject.dll
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\obj\Debug\net5.0\ref\MainProject.dll
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\obj\Debug\net5.0\MainProject.pdb
+C:\Users\User\source\Новая папка\PlariumHomework-Main-Types-4-\OOP\VariantC\obj\Debug\net5.0\MainProject.genruntimeconfig.cache
