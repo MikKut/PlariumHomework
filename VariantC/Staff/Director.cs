@@ -2,9 +2,10 @@
 
 namespace MainProject
 {
+    [Serializable]
     class Director:Person
     {
-        string _category = "director";
+        private readonly string _category = "director";
         public override string Category { get => _category; }
         public Director(string name, string date) : base(name, date)
         {
@@ -13,6 +14,10 @@ namespace MainProject
         public Director(string name, DateTime date) : base(name, date)
         {
 
+        }
+        public Director(bool enterViaConsole) : base(enterViaConsole)
+        {
+            
         }
         public Director() : base()
         {
