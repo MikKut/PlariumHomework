@@ -13,12 +13,10 @@ namespace MainProject.DB
     {
         static string pathToCurrentBD;
         static string pathToBackup;
-        static string pathToDBBackup;
         public DataBase(string thepathToCurrentBD)
         {
             pathToCurrentBD = MakeFileName(thepathToCurrentBD, ".txt");
             pathToBackup = MakeFileName(thepathToCurrentBD + "_backup",".json");
-            pathToDBBackup = MakeFileName("backup", ".txt");
             if (!File.Exists(pathToCurrentBD))
             {
                 File.Create(pathToCurrentBD).Close();
@@ -27,21 +25,17 @@ namespace MainProject.DB
             {
                 File.Create(pathToBackup).Close();
             }
-            if (!File.Exists(pathToBackup))
-            {
-                File.Create(pathToDBBackup).Close();
-            }
+            CreateRecords(new VideoLibrary());
         }
-        private readonly string SeparatorInTheEnd = "------------------------------";
        
         public void CreateRecords(VideoLibrary vb)
         {          
             try
             {
-                using (StreamWriter sw = new StreamWriter(pathToCurrentBD, false, Encoding.Default))
+                using (var sw = new StreamWriter(pathToCurrentBD, false, Encoding.Default))
                 {
-                    sw.WriteLine(vb.films.Values.Count);
-                    foreach (var film in vb.films) 
+                    sw.WriteLine(vb.Films.Values.Count);
+                    foreach (var film in vb.Films) 
                     {
                         sw.WriteLine(film.Value.ToString());
                     }
@@ -52,7 +46,7 @@ namespace MainProject.DB
                 Console.WriteLine(e.Message + " so the data base was backuped");
                 try
                 {
-                    File.Copy(pathToDBBackup, pathToCurrentBD, true);
+                    CreateRecords(GetBackup());
                 }
                 catch (IOException iox)
                 {
@@ -70,37 +64,37 @@ namespace MainProject.DB
                 string[] actorInfo;
                 string[] directorInfo;
                 int numberOfActors = 0, numberOfDirectors = 0;
-                List<Actor> actors;
-                List<Director> directors;
-                DateTime dateOfCreation = default(DateTime);
-                using (StreamReader sr = new StreamReader(pathToCurrentBD, Encoding.Default))
+                List<Actor> Actors;
+                List<Director> Directors;
+                DateTime dateOfCreation = default;
+                using (var sr = new StreamReader(pathToCurrentBD, Encoding.Default))
                 {
                     int countOfFilms = Int32.Parse(sr.ReadLine());
                     for (int i = 0; i < countOfFilms; i++)
                     {
                         FillToFilmInfo(sr.ReadLine().Split("///"),ref category, ref nameOfTheFilm, ref country, ref numberOfActors, ref numberOfDirectors, ref dateOfCreation);
-                        actors = new(numberOfActors);
-                        directors = new(numberOfDirectors);
+                        Actors = new(numberOfActors);
+                        Directors = new(numberOfDirectors);
                         for (int j = 0; j < numberOfActors; j++)
                         {
                             actorInfo = sr.ReadLine().Split(" ");
-                            actors.Add(new Actor(actorInfo[0], DateTime.Parse(actorInfo[1])));
+                            Actors.Add(new Actor(actorInfo[0], DateTime.Parse(actorInfo[1])));
                         }
                         for (int j = 0; j < numberOfDirectors; j++)
                         {
                             directorInfo = sr.ReadLine().Split(" ");
-                            directors.Add(new Director(directorInfo[0], DateTime.Parse(directorInfo[1])));
+                            Directors.Add(new Director(directorInfo[0], DateTime.Parse(directorInfo[1])));
                         }
                         switch (category)
                         {
                             case "horror":
-                                vb.AddFilm(new HorrorFilm(nameOfTheFilm, country, dateOfCreation, actors, directors));
+                                vb.AddFilm(new HorrorFilm(nameOfTheFilm, country, dateOfCreation, Actors, Directors));
                                 break;
                             case "comedy":
-                                vb.AddFilm(new ComedyFilm(nameOfTheFilm, country, dateOfCreation, actors, directors));
+                                vb.AddFilm(new ComedyFilm(nameOfTheFilm, country, dateOfCreation, Actors, Directors));
                                 break;
                             case "action":
-                                vb.AddFilm(new ComedyFilm(nameOfTheFilm, country, dateOfCreation, actors, directors));
+                                vb.AddFilm(new ComedyFilm(nameOfTheFilm, country, dateOfCreation, Actors, Directors));
                                 break;
                         }
                         sr.ReadLine();
@@ -117,7 +111,7 @@ namespace MainProject.DB
                 return GetBackup();
             }
         }
-        public void UpdateRecords(VideoLibrary vb) // Обновить запись заказа по телефону.
+        public void UpdateRecords(VideoLibrary vb) 
         {
              try 
              {
@@ -146,22 +140,97 @@ namespace MainProject.DB
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"There is no files to delete");
+                Console.WriteLine($"There is no files to delete: \"{ex.Message}\"");
             }
           
         }
         public VideoLibrary GetBackup()
         {
-            return JsonSerializer.Deserialize<VideoLibrary>(pathToBackup);
+            VideoLibrary vb;
+            Film film;
+            List<Actor> theActors = new();
+            List<Director> theDirectors = new();
+            string  filmString ;
+            using (var sr = new StreamReader(pathToBackup, Encoding.Default))
+            {
+                vb = new VideoLibrary(JsonSerializer.Deserialize<VideoLibrary>(sr.ReadLine()));
+                for (int i = 0; i < vb.NumberOfFilms; i++)
+                {
+                    filmString = sr.ReadLine();
+                    if (filmString.StartsWith("{\"Category\":\"horror"))
+                    {
+                        film = JsonSerializer.Deserialize<HorrorFilm>(filmString);
+                        for (int j = 0; j < film.NumberOfActors; j++)
+                        {
+                            theActors.Add(JsonSerializer.Deserialize<Actor>(sr.ReadLine()));
+                        }
+                        film.ChangeActorsInfo(theActors);
+                        for (int j = 0; j < film.NumberOfDirectors; j++)
+                        {
+                            theDirectors.Add(JsonSerializer.Deserialize<Director>(sr.ReadLine()));
+                        }
+                        film.ChangeDirectorsInfo(theDirectors);
+                        vb.Films.Add(i, new HorrorFilm(film));
+                    }
+                    else if (filmString.StartsWith("{\"Category\":\"comedy"))
+                    {
+                        film = JsonSerializer.Deserialize<ComedyFilm>(filmString);
+                        for (int j = 0; j < film.NumberOfActors; j++)
+                        {
+                            theActors.Add(JsonSerializer.Deserialize<Actor>(sr.ReadLine()));
+                        }
+                        film.ChangeActorsInfo(theActors);
+                        for (int j = 0; j < film.NumberOfDirectors; j++)
+                        {
+                            theDirectors.Add(JsonSerializer.Deserialize<Director>(sr.ReadLine()));
+                        }
+                        film.ChangeDirectorsInfo(theDirectors);
+                        vb.Films.Add(i, new ComedyFilm(film));
+                    }
+                    else if (filmString.StartsWith("{\"Category\":\"action"))
+                    {
+                        film = JsonSerializer.Deserialize<ActionFilm>(filmString);
+                        for (int j = 0; j < film.NumberOfActors; j++)
+                        {
+                            theActors.Add(JsonSerializer.Deserialize<Actor>(sr.ReadLine()));
+                        }
+                        film.ChangeActorsInfo(theActors);
+                        for (int j = 0; j < film.NumberOfDirectors; j++)
+                        {
+                            theDirectors.Add(JsonSerializer.Deserialize<Director>(sr.ReadLine()));
+                        }
+                        film.ChangeDirectorsInfo(theDirectors);
+                        vb.Films.Add(i, new ActionFilm(film));
+                    }
+                    else
+                    {
+                        throw new JsonException("There is no such category of film");
+                    }
+                }              
+            }
+            return vb;
         }
+
         private void MakeBackup(VideoLibrary vb)
         {
             StringBuilder jsonString = new(JsonSerializer.Serialize<VideoLibrary>(vb));
-            foreach (var film in vb.films)
+            Console.WriteLine(jsonString);
+            foreach (var film in vb.Films)
             {
+                jsonString.Append('\n');
                 jsonString.Append(JsonSerializer.Serialize(film.Value));
-            }
-            File.WriteAllText(pathToDBBackup, jsonString.ToString());
+                foreach (var actor in film.Value.Actors)
+                {
+                    jsonString.Append('\n');
+                    jsonString.Append(JsonSerializer.Serialize(actor));
+                }
+                foreach (var director in film.Value.Directors)
+                {
+                    jsonString.Append('\n');
+                    jsonString.Append(JsonSerializer.Serialize(director));
+                }
+            } 
+            File.WriteAllText(pathToBackup, jsonString.ToString());
         }
         private void FillToFilmInfo(string[] data, ref string category, ref string nameOfTheFilm, ref string country, ref int numberOfActors, ref int numberOfDirectors, ref DateTime dateOfCreation)
         {
@@ -187,24 +256,24 @@ namespace MainProject.DB
                 int numberOfActors = 0, numberOfDirectors = 0;
                 string[] actorInfo;
                 string[] directorInfo;
-                List<Actor> actors;
-                List<Director> directors;
-                DateTime dateOfCreation = default(DateTime);
-                using (StreamReader sr = new StreamReader(pathToCurrentBD, Encoding.Default))
+                List<Actor> Actors;
+                List<Director> Directors;
+                DateTime dateOfCreation = default;
+                using (var sr = new StreamReader(pathToCurrentBD, Encoding.Default))
                 {
                     int countOfFilms = Int32.Parse(sr.ReadLine());
                     for (int i = 0; i < countOfFilms; i++)
                     {
                         FillToFilmInfo(sr.ReadLine().Split("///"), ref category, ref nameOfTheFilm, ref country, ref numberOfActors, ref numberOfDirectors, ref dateOfCreation);
-                        actors = new(numberOfActors);
-                        directors = new(numberOfDirectors);
+                        Actors = new(numberOfActors);
+                        Directors = new(numberOfDirectors);
                         if ((numberOfActors == film.NumberOfActors && numberOfDirectors == film.NumberOfDirectors && category == film.Category && country == film.Country)) isFound = true;
                         for (int j = 0; j < numberOfActors; j++)
                         {
                             actorInfo = sr.ReadLine().Split(" ");
-                            actors.Add(new Actor(actorInfo[0], DateTime.Parse(actorInfo[1])));
+                            Actors.Add(new Actor(actorInfo[0], DateTime.Parse(actorInfo[1])));
                         }
-                        if (film.actors.Equals(actors))
+                        if (film.Actors.Equals(Actors))
                         {
                             isFound = true;
                         }
@@ -215,9 +284,9 @@ namespace MainProject.DB
                         for (int j = 0; j < numberOfDirectors; j++)
                         {
                             directorInfo = sr.ReadLine().Split(" ");
-                            directors.Add(new Director(directorInfo[0], DateTime.Parse(directorInfo[1])));
+                            Directors.Add(new Director(directorInfo[0], DateTime.Parse(directorInfo[1])));
                         }
-                        if (film.actors.Equals(actors))
+                        if (film.Actors.Equals(Actors))
                         {
                             isFound = true;
                         }
@@ -248,7 +317,7 @@ namespace MainProject.DB
             {
                 fileName += $@"{ending}";
             }
-            StringBuilder pathToCurrentBDOfTheDB = new StringBuilder();
+            var pathToCurrentBDOfTheDB = new StringBuilder();
             pathToCurrentBDOfTheDB.Append(fileName);
             return pathToCurrentBDOfTheDB.ToString();
         }

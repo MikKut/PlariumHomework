@@ -4,14 +4,15 @@ using System.Text;
 
 namespace MainProject
 {
+    [Serializable]
     abstract internal class Film
     {
         public delegate void DisplayStaffInformation();
         public abstract string Category { get; }
         private const double MinRating = 0, MaxRating = 10;
         private string _name, _country;
-        public List<Actor> actors;
-        public List<Director> directors;
+        public List<Actor> Actors;
+        public List<Director> Directors;
         private int _numberOfActors = 0, _numberOfDirectors = 0, _numberOfRates = 0;
         private double _totalRating = 0;
         public double TotalRating
@@ -68,7 +69,7 @@ namespace MainProject
             {
                 if (value <= 0)
                 {
-                    throw new Exception($"number of actors in film \"{Name}\" less than 1");
+                    throw new Exception($"number of Actors in film \"{Name}\" less than 1");
                 }
                 else 
                 {
@@ -83,7 +84,7 @@ namespace MainProject
             {
                 if (value <= 0)
                 {
-                    throw new Exception($"number of directors in film \"{Name}\" less than 1.");
+                    throw new Exception($"number of Directors in film \"{Name}\" less than 1.");
                 }
                 else
                 {
@@ -96,22 +97,43 @@ namespace MainProject
             Name = name;
             Country = country;
             DateOfCreation = dateOfCreation;
-            actors = new List<Actor>(arrayOfActors);
+            Actors = new List<Actor>(arrayOfActors);
             NumberOfActors = arrayOfActors.Capacity;
             NumberOfDirectors = arrayOfDirectors.Capacity;
-            directors = new List<Director>(arrayOfDirectors);
+            Directors = new List<Director>(arrayOfDirectors);
         }
-        public Film()
+        public Film(Film film)
         {
-            try
+            Name = film.Name;
+            Country = film.Country;
+            DateOfCreation = film.DateOfCreation;
+            Actors = film.Actors;
+            NumberOfActors = film.NumberOfActors;
+            NumberOfDirectors = film.NumberOfDirectors;
+            Directors = film.Directors;
+        }
+        public Film(bool fillInConsole)
+        {
+            if (!fillInConsole)
             {
-                FillFilmInfo();
+                SetDefaultValueToLists();
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine($"Wrong input data: \"{ex.Message}\", try again");
-                FillFilmInfo();
+                try
+                {
+                    FillFilmInfo();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Wrong input data: \"{ex.Message}\", try again");
+                    FillFilmInfo();
+                }
             }
+        }
+        public Film() //for deserialization
+        {
+            SetDefaultValueToLists();
         }
         public void FillFilmInfo()
         {
@@ -121,7 +143,7 @@ namespace MainProject
             Country = Console.ReadLine();
             DateOfCreation = FindDateOfTheFilm();
             FillActorsInfo();
-            FillDirectorsInfo();       
+            FillDirectorsInfo();
         }
         public DisplayStaffInformation GetDelegateOfDisplaingStaffInformation(bool displayActorsInfo, bool displayDirectorInfo)
         {
@@ -143,9 +165,22 @@ namespace MainProject
                 del();
             }
         }
+        public void ChangeActorsInfo(List<Actor> newActors)
+        {
+            Actors = newActors;
+        }
+        public void ChangeDirectorsInfo(List<Director> newDirectors)
+        {
+            Directors = newDirectors;
+        }
         public void RateTheFilm(double mark)
         {
             TotalRating = mark;
+        }
+        private void SetDefaultValueToLists()
+        {
+            Actors = new List<Actor>();
+            Directors = new List<Director>();
         }
         private int FillNumberOf(string category)
         {
@@ -187,10 +222,10 @@ namespace MainProject
             {
                 NumberOfActors = FillNumberOf("actor");
                 Console.WriteLine("Fill actor info:");
-                actors = new List<Actor>(NumberOfActors);
+                Actors = new List<Actor>(NumberOfActors);
                 for (int i = 0; i < NumberOfActors; i++)
                 {
-                    actors[i] = new Actor();
+                    Actors[i] = new Actor();
                 }
             }
             catch(Exception ex)
@@ -205,10 +240,10 @@ namespace MainProject
             {      
                 NumberOfDirectors = FillNumberOf("director");
                 Console.WriteLine("Fill director info:");
-                directors = new List<Director>(NumberOfDirectors);
+                Directors = new List<Director>(NumberOfDirectors);
                 for (int i = 0; i < NumberOfDirectors; i++)
                 {
-                    directors[i] = new Director();
+                    Directors[i] = new Director();
                 }
             }
             catch (Exception ex)
@@ -220,7 +255,7 @@ namespace MainProject
         public void DisplayInformationAboutTheActors()
         {
             Console.WriteLine($"In the film {Name} starred: ");
-            foreach (Person actor in actors)
+            foreach (Person actor in Actors)
             {
                 actor.ShowInformation();
             }
@@ -228,7 +263,7 @@ namespace MainProject
         public void DisplayInformationAboutTheDirectors()
         {
             Console.WriteLine($"In the film {Name} starred: ");
-            foreach (Director director in directors)
+            foreach (Director director in Directors)
             {
                 director.ShowInformation();
             }
@@ -236,7 +271,7 @@ namespace MainProject
         private string ActorsToString()
         {
             StringBuilder res = new();
-            foreach (var actor in actors)
+            foreach (var actor in Actors)
             {
                 res.Append(actor.ToString());
             }
@@ -245,7 +280,7 @@ namespace MainProject
         private string DirectorsToString()
         {
             StringBuilder res = new();
-            foreach (var director in directors)
+            foreach (var director in Directors)
             {
                 res.Append(director.ToString());
             }
@@ -253,8 +288,8 @@ namespace MainProject
         }
         public override string ToString()
         {
-            return $"{this.Category}///{this.Name}///{this.DateOfCreation.ToString()}///{this.Country}///{actors.Count}///{directors.Count}\n" +
-                $"{ActorsToString()}{DirectorsToString()}";
+            return $"{this.Category}///{this.Name}///{this.DateOfCreation.ToString()}///{this.Country}///{Actors.Count}///{Directors.Count}\n"
+                + $"{ActorsToString()}{DirectorsToString()}";
 
         }
         public bool Equal(Film film2)

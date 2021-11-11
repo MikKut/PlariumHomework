@@ -66,14 +66,21 @@ namespace MainProject
         }
         public Person()
         {
-            try
+            
+        }
+        public Person(bool enterViaConsole)
+        {
+            if (enterViaConsole)
             {
-                SetStartData();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Wrong inout data: \"{ex.Message}\", try again");
-                SetStartData();
+                try
+                {
+                    SetStartData();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Wrong inout data: \"{ex.Message}\", try again");
+                    SetStartData();
+                }
             }
         }
         public int CompareTo(Person other)

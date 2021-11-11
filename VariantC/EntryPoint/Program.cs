@@ -26,6 +26,7 @@ namespace MainProject.EntryPoint
                 var db = new DataBase("db.txt");
                 db.CreateRecords(vb);
                 var vb2 = db.ReadRecords();
+                var vb3 = db.GetBackup();
                 vb.DiplayFilmsOfTheYear(2002);
                 vb.DeleteFilmsUnderTheYear(2003);
                 vb.DiplayFilmsOfTheYear(2002);

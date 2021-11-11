@@ -3,7 +3,8 @@ using System.Collections.Generic;
 
 namespace MainProject
 {
-    class HorrorFilm : Film
+    [Serializable]
+    internal class HorrorFilm : Film
     {
         public override string Category { get => "horror"; }
         public HorrorFilm() : base()
@@ -14,6 +15,14 @@ namespace MainProject
         public HorrorFilm(string name, string country, DateTime dateOfCreation, List<Actor> arrayOfActors, List<Director> arrayOfDirectors) : base(name, country, dateOfCreation, arrayOfActors, arrayOfDirectors)
         {
 
+        }
+
+        public HorrorFilm(Film film) : base(film)
+        {
+        }
+
+        public HorrorFilm(bool fillInConsole) : base(fillInConsole)
+        {
         }
     }
 }
