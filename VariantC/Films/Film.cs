@@ -1,20 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-
+using System.Threading;
 namespace MainProject
 {
     [Serializable]
     abstract internal class Film
     {
+        object lockObj = new object();
         public delegate void DisplayStaffInformation();
         public abstract string Category { get; }
         private const double MinRating = 0, MaxRating = 10;
         private string _name, _country;
         public List<Actor> Actors;
         public List<Director> Directors;
-        private int _numberOfActors = 0, _numberOfDirectors = 0, _numberOfRates = 0;
-        private double _totalRating = 0;
+        private int _numberOfActors, _numberOfDirectors, _numberOfRates;
+        private double _totalRating;
         public double TotalRating
         {
             get => _totalRating;
@@ -137,26 +138,32 @@ namespace MainProject
         }
         public void FillFilmInfo()
         {
-            Console.Write("\nFill film info:\nEnter name:");
-            Name = Console.ReadLine();
-            Console.Write("Enter country:");
-            Country = Console.ReadLine();
-            DateOfCreation = FindDateOfTheFilm();
-            FillActorsInfo();
-            FillDirectorsInfo();
+            lock (lockObj)
+            {
+                Console.Write("\nFill film info:\nEnter name:");
+                Name = Console.ReadLine();
+                Console.Write("Enter country:");
+                Country = Console.ReadLine();
+                DateOfCreation = FindDateOfTheFilm();
+                FillActorsInfo();
+                FillDirectorsInfo();
+            }
         }
         public DisplayStaffInformation GetDelegateOfDisplaingStaffInformation(bool displayActorsInfo, bool displayDirectorInfo)
         {
-            DisplayStaffInformation del = null;
-            if (displayActorsInfo == true)
+            lock (lockObj)
             {
-                del += DisplayInformationAboutTheActors;
+                DisplayStaffInformation del = null;
+                if (displayActorsInfo == true)
+                {
+                    del += DisplayInformationAboutTheActors;
+                }
+                if (displayDirectorInfo == true)
+                {
+                    del += DisplayInformationAboutTheDirectors;
+                }
+                return del;
             }
-            if (displayDirectorInfo == true)
-            {
-                del += DisplayInformationAboutTheDirectors;
-            }
-            return del;
         }
         public void DisplayFilmInfo(DisplayStaffInformation del)
         {
@@ -186,13 +193,15 @@ namespace MainProject
         {
             try
             {
-                Console.Write($"Enter number of {category}s: ");
-                if (!int.TryParse(Console.ReadLine(), out int temp))
+                lock (lockObj)
                 {
-                    throw new Exception($"Number of {category}s is wrong of film {Name}");
-                }
-                return temp;
-            }
+                    Console.Write($"Enter number of {category}s: ");
+                    if (!int.TryParse(Console.ReadLine(), out int temp))
+                    {
+                        throw new Exception($"Number of {category}s is wrong of film {Name}");
+                    }
+                    return temp;
+                }            }
             catch (Exception ex)
             {
                 Console.WriteLine($"Wrong input data: \"{ex.Message}\", try again");
@@ -203,13 +212,15 @@ namespace MainProject
         {
             try
             {
-                Console.Write("Enter date of creation: ");
-                if (!DateTime.TryParse(Console.ReadLine(), out DateTime temp))
+                lock (lockObj)
                 {
-                    throw new Exception($"Wrong date of creation of film {Name}");
-                }
-                return temp;
-            }
+                    Console.Write("Enter date of creation: ");
+                    if (!DateTime.TryParse(Console.ReadLine(), out DateTime temp))
+                    {
+                        throw new Exception($"Wrong date of creation of film {Name}");
+                    }
+                    return temp;
+                }            }
             catch (Exception ex)
             {
                 Console.WriteLine($"Wrong input data: \"{ex.Message}\", try again");
@@ -220,12 +231,15 @@ namespace MainProject
         {
             try
             {
-                NumberOfActors = FillNumberOf("actor");
-                Console.WriteLine("Fill actor info:");
-                Actors = new List<Actor>(NumberOfActors);
-                for (int i = 0; i < NumberOfActors; i++)
+                lock (lockObj)
                 {
-                    Actors[i] = new Actor();
+                    NumberOfActors = FillNumberOf("actor");
+                    Console.WriteLine("Fill actor info:");
+                    Actors = new List<Actor>(NumberOfActors);
+                    for (int i = 0; i < NumberOfActors; i++)
+                    {
+                        Actors[i] = new Actor();
+                    }
                 }
             }
             catch(Exception ex)
@@ -237,13 +251,16 @@ namespace MainProject
         private void FillDirectorsInfo()
         {
             try
-            {      
-                NumberOfDirectors = FillNumberOf("director");
-                Console.WriteLine("Fill director info:");
-                Directors = new List<Director>(NumberOfDirectors);
-                for (int i = 0; i < NumberOfDirectors; i++)
+            {
+                lock (lockObj)
                 {
-                    Directors[i] = new Director();
+                    NumberOfDirectors = FillNumberOf("director");
+                    Console.WriteLine("Fill director info:");
+                    Directors = new List<Director>(NumberOfDirectors);
+                    for (int i = 0; i < NumberOfDirectors; i++)
+                    {
+                        Directors[i] = new Director();
+                    }
                 }
             }
             catch (Exception ex)
@@ -254,37 +271,51 @@ namespace MainProject
         }
         public void DisplayInformationAboutTheActors()
         {
-            Console.WriteLine($"In the film {Name} starred: ");
-            foreach (Person actor in Actors)
+            lock (lockObj)
             {
-                actor.ShowInformation();
+                Console.WriteLine($"In the film {Name} starred: ");
+                foreach (Person actor in Actors)
+                {
+                    actor.ShowInformation();
+                }
             }
         }
         public void DisplayInformationAboutTheDirectors()
         {
-            Console.WriteLine($"In the film {Name} starred: ");
-            foreach (Director director in Directors)
+            lock (lockObj)
             {
-                director.ShowInformation();
+                Console.WriteLine($"In the film {Name} starred: ");
+                foreach (Director director in Directors)
+                {
+                    director.ShowInformation();
+                }
             }
         }
         private string ActorsToString()
         {
-            StringBuilder res = new();
-            foreach (var actor in Actors)
+            lock (lockObj)
             {
-                res.Append(actor.ToString());
+                StringBuilder res = new();
+                foreach (var actor in Actors)
+                {
+                    res.Append(actor.ToString());
+                }
+                return res.ToString();
             }
-            return res.ToString();
+            
         }
         private string DirectorsToString()
         {
-            StringBuilder res = new();
-            foreach (var director in Directors)
+            lock (lockObj)
             {
-                res.Append(director.ToString());
+
+                StringBuilder res = new();
+                foreach (var director in Directors)
+                {
+                    res.Append(director.ToString());
+                }
+                return res.ToString();
             }
-            return res.ToString();
         }
         public override string ToString()
         {

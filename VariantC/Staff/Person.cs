@@ -5,6 +5,7 @@ namespace MainProject
 {
     public abstract class Person : IComparable<Person>
     {
+        object lockObj = new object();
         public abstract string Category { get;}
         private DateTime _dateOfBirth;
         private string _name;
@@ -85,16 +86,31 @@ namespace MainProject
         }
         public int CompareTo(Person other)
         {
-            int date = this.DateOfBirth.CompareTo(other.DateOfBirth), name = this.Name.CompareTo(other.Name);
-            if (name == 0)
+            lock (lockObj)
             {
-                if (date == 0)
+
+                int date = this.DateOfBirth.CompareTo(other.DateOfBirth), name = this.Name.CompareTo(other.Name);
+                if (name == 0)
                 {
-                    return 0;
+                    if (date == 0)
+                    {
+                        return 0;
+                    }
+                    else
+                    {
+                        if (date > 0)
+                        {
+                            return 1;
+                        }
+                        else
+                        {
+                            return -1;
+                        }
+                    }
                 }
                 else
                 {
-                    if (date > 0)
+                    if (name > 0)
                     {
                         return 1;
                     }
@@ -104,17 +120,6 @@ namespace MainProject
                     }
                 }
             }
-            else
-            {
-                if (name > 0)
-                {
-                    return 1;
-                }
-                else
-                {
-                    return -1;
-                }
-            }
         }
         public override string ToString()
         {
@@ -122,10 +127,14 @@ namespace MainProject
         }
         private void SetStartData()
         {
-            Console.WriteLine("Enter his/her name:");
-            Name = Console.ReadLine();
-            Console.WriteLine("Enter his/her date of birth: ");
-            DateOfBirth = SetDateOfBirth(Console.ReadLine(),Name);
+            lock (lockObj)
+            {
+
+                Console.WriteLine("Enter his/her name:");
+                Name = Console.ReadLine();
+                Console.WriteLine("Enter his/her date of birth: ");
+                DateOfBirth = SetDateOfBirth(Console.ReadLine(), Name);
+            }
         }
         private static DateTime SetDateOfBirth(string date, string name)
         {

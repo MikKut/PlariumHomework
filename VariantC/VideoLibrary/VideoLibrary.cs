@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Threading;
 namespace MainProject
 {
     [Serializable]
     class VideoLibrary
     {
+        private object lockObj = new object();
         public delegate void RatingEventHandler(RatingEventArguments args, Film film);
         public event RatingEventHandler OnRating;
         public Dictionary<int, Film> Films;
@@ -48,9 +49,12 @@ namespace MainProject
             {
                 throw new ArgumentException("There is no such film");
             }
-            RatingEventArguments args = new();
-            args.TotalRating = rate;
-            OnRating?.Invoke(args, film);
+            lock (lockObj)
+            {
+                RatingEventArguments args = new();
+                args.TotalRating = rate;
+                OnRating?.Invoke(args, film);
+            }
         }
         private void SubscribeAtRating()
         {
@@ -84,12 +88,15 @@ namespace MainProject
             {
                 if (NumberOfFilms > 0)
                 {
-                    int index = FindIndexOfTheFilmOrReturnMinusOne(film);
-                    if (index == -1)
+                    lock (lockObj)
                     {
-                        throw new ArgumentException("There is no such film");
+                        int index = FindIndexOfTheFilmOrReturnMinusOne(film);
+                        if (index == -1)
+                        {
+                            throw new ArgumentException("There is no such film");
+                        }
+                        Films.Remove(index);
                     }
-                    Films.Remove(index);
                     NumberOfFilms--;
                 }
                 else
@@ -104,16 +111,27 @@ namespace MainProject
         }
         public int FindIndexOfTheFilmOrReturnMinusOne(Film film)
         {
-            var theFilms = 
-                Films
-                .Where(theFilm => theFilm.Value == film)
-                .Select(x => x);
-
-            foreach (var theFilm in theFilms)
+            bool acquiredLock = false;
+            try
             {
-                return theFilm.Key;
+                Monitor.Enter(lockObj, ref acquiredLock);
+                var theFilms =
+                    Films
+                    .Where(theFilm => theFilm.Value == film)
+                    .Select(x => x);
+                foreach (var theFilm in theFilms)
+                {
+                    return theFilm.Key;
+                }
+                return -1;
             }
-            return -1;
+            finally
+            {
+                if (acquiredLock)
+                {
+                    Monitor.Exit(lockObj);
+                }
+            }
         }
         public void RemoveFilm(int indexOfTheFilm)
         {
@@ -141,15 +159,24 @@ namespace MainProject
         }
         public bool FilmExists(Film theFilm)
         {
-            if (NumberOfFilms != 0)
+            if (NumberOfFilms == 0)
             {
-                foreach (var film in Films)
-                {
-                    if (film.Value.Equal(theFilm))
+                return false;
+            }
+            else
+            {
+                bool isLocked = false;
+                Monitor.Enter(lockObj, ref isLocked);
+                    foreach (var film in Films)
                     {
-                        return true;
+                        if (film.Value.Equal(theFilm))
+                        {
+                            if (isLocked)
+                                Monitor.Exit(lockObj);
+
+                            return true;
+                        }
                     }
-                }
             }
             return false;
         }
@@ -157,14 +184,17 @@ namespace MainProject
         {
             if (this.FilmExists(theFilm))
             {
-                var theFilms =
-                    Films
-                    .Where(film => theFilm.Equal(film.Value))
-                    .Select(x => x);
-
-                foreach (var film in theFilms)
+                lock (lockObj)
                 {
-                    film.Value.DisplayInformationAboutTheActors();
+                    var theFilms =
+                        Films
+                        .Where(film => theFilm.Equal(film.Value))
+                        .Select(x => x);
+
+                    foreach (var film in theFilms)
+                    {
+                        film.Value.DisplayInformationAboutTheActors();
+                    }
                 }
             }
             else
@@ -174,77 +204,95 @@ namespace MainProject
         }
         public void FindActorsWhoWasAsMinimumInNFilms(int numberOfFilms)
         {
-            int sizeOfTheList, countOfAppears = 1;
-            bool wasAdded = false;
-            Actor prevActor = new(" ", default(DateTime));
-            List<Actor> listOfAllActors = FindListOfAllActors();
-            listOfAllActors.Sort();
-            sizeOfTheList = listOfAllActors.Count;
-            for (int i = 0; i < sizeOfTheList - 1; i++)
+            lock (lockObj)
             {
-                if (listOfAllActors[i].Equal(listOfAllActors[i + 1]))
+                int sizeOfTheList, countOfAppears = 1;
+                bool wasAdded = false;
+                Actor prevActor = new(" ", default(DateTime));
+                List<Actor> listOfAllActors = FindListOfAllActors();
+                listOfAllActors.Sort();
+                sizeOfTheList = listOfAllActors.Count;
+                for (int i = 0; i < sizeOfTheList - 1; i++)
                 {
-                    countOfAppears++;
-                    wasAdded = true;
-                    if (countOfAppears >= numberOfFilms)
+                    if (listOfAllActors[i].Equal(listOfAllActors[i + 1]))
                     {
-                        prevActor = listOfAllActors[i];
+                        countOfAppears++;
+                        wasAdded = true;
+                        if (countOfAppears >= numberOfFilms)
+                        {
+                            prevActor = listOfAllActors[i];
+                        }
+                    }
+                    else
+                    {
+                        if (countOfAppears >= numberOfFilms && wasAdded)
+                        {
+                            prevActor.ShowInformation();
+                        }
+                        countOfAppears = 0;
+                        wasAdded = false;
                     }
                 }
-                else
+                if (countOfAppears >= numberOfFilms)
                 {
-                    if (countOfAppears >= numberOfFilms && wasAdded)
-                    {
-                        prevActor.ShowInformation();
-                    }
-                    countOfAppears = 0;
-                    wasAdded = false;
+                    prevActor.ShowInformation();
                 }
-            }
-            if (countOfAppears >= numberOfFilms)
-            {
-                prevActor.ShowInformation();
             }
         }
         private List<Actor> FindListOfAllActors()
         {
-            List<Actor> listOfAllActors = new();
-            listOfAllActors.AddRange(Films.SelectMany(film => film.Value.Actors));
-            return listOfAllActors;
+            bool acquiredLock = false;
+            try
+            {
+                Monitor.Enter(lockObj, ref acquiredLock);
+                List<Actor> listOfAllActors = new();
+                listOfAllActors.AddRange(Films.SelectMany(film => film.Value.Actors));
+                return listOfAllActors;
+            }
+            finally
+            {
+                if (acquiredLock) Monitor.Exit(lockObj);
+            }
         }
         public void FindActorsWhoWasDirectorInAnyOfTheFilms()
         {
-            List<Actor> listOfAllActors = FindListOfAllActors();
-            List<Director> listOfAllDirectors = new();
-            foreach (var film in Films)
+            lock (lockObj)
             {
-                listOfAllDirectors.AddRange(film.Value.Directors);
-                listOfAllActors.AddRange(film.Value.Actors);
+                List<Actor> listOfAllActors = FindListOfAllActors();
+                List<Director> listOfAllDirectors = new();
+                foreach (var film in Films)
+                {
+                    listOfAllDirectors.AddRange(film.Value.Directors);
+                    listOfAllActors.AddRange(film.Value.Actors);
+                }
+                listOfAllActors.Sort();
+                listOfAllDirectors.Sort();
+                DisplayActorsWhoWasDirectorInAnyOfTheFilms(listOfAllActors, listOfAllDirectors);
             }
-            listOfAllActors.Sort();
-            listOfAllDirectors.Sort();
-            DisplayActorsWhoWasDirectorInAnyOfTheFilms(listOfAllActors, listOfAllDirectors);
         }
         private void DisplayActorsWhoWasDirectorInAnyOfTheFilms(List<Actor> sortedListOfAllActors, List<Director> sortedListOfAllDirectors )
         {
-            Actor prevActor = new(" ", default(DateTime)), currentActor = new(" ", default(DateTime));
-
-            var staff = 
-                sortedListOfAllActors
-                .SelectMany(actor => sortedListOfAllDirectors
-                .Select(director => (actor, director)));
-
-            foreach (var (actor, director) in staff)
+            lock (lockObj)
             {
-                currentActor = actor;
-                if (currentActor.Equal(director))
+                Actor prevActor = new(" ", default(DateTime)), currentActor = new(" ", default(DateTime));
+
+                var staff =
+                    sortedListOfAllActors
+                    .SelectMany(actor => sortedListOfAllDirectors
+                    .Select(director => (actor, director)));
+
+                foreach (var (actor, director) in staff)
                 {
-                    if (!prevActor.Equal(currentActor))
+                    currentActor = actor;
+                    if (currentActor.Equal(director))
                     {
-                        currentActor.ShowInformation();
+                        if (!prevActor.Equal(currentActor))
+                        {
+                            currentActor.ShowInformation();
+                        }
+                        prevActor = actor;
+                        break;
                     }
-                    prevActor = actor;
-                    break;
                 }
             }
         }
@@ -252,51 +300,63 @@ namespace MainProject
 
         public void DiplayFilmsOfTheYear(DateTime time)
         {
-            var theFilms = 
-                Films
-                .Where(film => film.Value.DateOfCreation.Year == time.Year)
-                .Select(x => x);
-
-            foreach (var film in theFilms)
+            lock (lockObj)
             {
-                Console.WriteLine(film.Value.Name);
+                var theFilms =
+                    Films
+                    .Where(film => film.Value.DateOfCreation.Year == time.Year)
+                    .Select(x => x);
+
+                foreach (var film in theFilms)
+                {
+                    Console.WriteLine(film.Value.Name);
+                }
             }
         }
         public void DiplayFilmsOfTheYear(int year)
         {
-            var theFilms =
-                Films
-                .Where(film => film.Value.DateOfCreation.Year == year)
-                .Select(x => x);
-
-            foreach (var film in theFilms)
+            lock (lockObj)
             {
-                Console.WriteLine(film.Value.Name);
+                var theFilms =
+                    Films
+                    .Where(film => film.Value.DateOfCreation.Year == year)
+                    .Select(x => x);
+
+                foreach (var film in theFilms)
+                {
+                    Console.WriteLine(film.Value.Name);
+                }
             }
         }
         public void DeleteFilmsUnderTheYear(int year)
         {
-            var theFilms = 
+            lock (lockObj)
+            {
+                var theFilms =
                 Films
                 .Where(film => film.Value.DateOfCreation.Year < year)
                 .Select(x => x);
 
-            foreach (var film in theFilms)
-            {
-                this.RemoveFilm(film.Value);
+                foreach (var film in theFilms)
+                {
+                    this.RemoveFilm(film.Value);
+                }
             }
         }
         public void DeleteFilmsUnderTheYear(DateTime time)
         {
-            var theFilms =
+            lock (lockObj)
+            {
+                var theFilms =
                 Films
                 .Where(film => film.Value.DateOfCreation.Year < time.Year)
                 .Select(x => x);
 
-            foreach (var film in theFilms)
-            {
-                this.RemoveFilm(film.Value);
-            }
+                foreach (var film in theFilms)
+                {
+                    this.RemoveFilm(film.Value);
+                }
+            } 
         }
     }
 }

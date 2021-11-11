@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -11,19 +12,23 @@ namespace MainProject.DB
 {
     class DataBase
     {
-        static string pathToCurrentBD;
-        static string pathToBackup;
+        static object lockObj = new object();
+        string pathToCurrentBD;
+        string pathToBackup;
         public DataBase(string thepathToCurrentBD)
         {
-            pathToCurrentBD = MakeFileName(thepathToCurrentBD, ".txt");
-            pathToBackup = MakeFileName(thepathToCurrentBD + "_backup",".json");
-            if (!File.Exists(pathToCurrentBD))
+            lock (lockObj)
             {
-                File.Create(pathToCurrentBD).Close();
-            }
-            if (!File.Exists(pathToBackup))
-            {
-                File.Create(pathToBackup).Close();
+                pathToCurrentBD = MakeFileName(thepathToCurrentBD, ".txt");
+                pathToBackup = MakeFileName(thepathToCurrentBD + "_backup", ".json");
+                if (!File.Exists(pathToCurrentBD))
+                {
+                    File.Create(pathToCurrentBD).Close();
+                }
+                if (!File.Exists(pathToBackup))
+                {
+                    File.Create(pathToBackup).Close();
+                }
             }
             CreateRecords(new VideoLibrary());
         }
@@ -32,82 +37,96 @@ namespace MainProject.DB
         {          
             try
             {
-                using (var sw = new StreamWriter(pathToCurrentBD, false, Encoding.Default))
+                lock (lockObj)
                 {
-                    sw.WriteLine(vb.Films.Values.Count);
-                    foreach (var film in vb.Films) 
+                    using (var sw = new StreamWriter(pathToCurrentBD, false, Encoding.Default))
                     {
-                        sw.WriteLine(film.Value.ToString());
+
+                        sw.WriteLine(vb.Films.Values.Count);
+                        foreach (var film in vb.Films)
+                        {
+                            sw.WriteLine(film.Value.ToString());
+                        }
                     }
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message + " so the data base was backuped");
-                try
+                lock (lockObj)
                 {
-                    CreateRecords(GetBackup());
-                }
-                catch (IOException iox)
-                {
-                    Console.WriteLine(iox.Message);
+                    try
+                    {
+                        CreateRecords(GetBackup());
+                    }
+                    catch (IOException iox)
+                    {
+                        Console.WriteLine(iox.Message);
+                    }
                 }
             }
         }
     
         public VideoLibrary ReadRecords() 
         {
-            var vb = new VideoLibrary();
             try
             {
-                string nameOfTheFilm = "", country = "", category = "";
-                string[] actorInfo;
-                string[] directorInfo;
-                int numberOfActors = 0, numberOfDirectors = 0;
-                List<Actor> Actors;
-                List<Director> Directors;
-                DateTime dateOfCreation = default;
-                using (var sr = new StreamReader(pathToCurrentBD, Encoding.Default))
+                lock (lockObj)
                 {
-                    int countOfFilms = Int32.Parse(sr.ReadLine());
-                    for (int i = 0; i < countOfFilms; i++)
+                    var vb = new VideoLibrary();
+                    string nameOfTheFilm = "", country = "", category = "";
+                    string[] actorInfo;
+                    string[] directorInfo;
+                    int numberOfActors = 0, numberOfDirectors = 0;
+                    List<Actor> Actors;
+                    List<Director> Directors;
+                    DateTime dateOfCreation = default;
+                    using (var sr = new StreamReader(pathToCurrentBD, Encoding.Default))
                     {
-                        FillToFilmInfo(sr.ReadLine().Split("///"),ref category, ref nameOfTheFilm, ref country, ref numberOfActors, ref numberOfDirectors, ref dateOfCreation);
-                        Actors = new(numberOfActors);
-                        Directors = new(numberOfDirectors);
-                        for (int j = 0; j < numberOfActors; j++)
+                        int countOfFilms = Int32.Parse(sr.ReadLine());
+                        for (int i = 0; i < countOfFilms; i++)
                         {
-                            actorInfo = sr.ReadLine().Split(" ");
-                            Actors.Add(new Actor(actorInfo[0], DateTime.Parse(actorInfo[1])));
+                            FillToFilmInfo(sr.ReadLine().Split("///"), ref category, ref nameOfTheFilm, ref country, ref numberOfActors, ref numberOfDirectors, ref dateOfCreation);
+                            Actors = new(numberOfActors);
+                            Directors = new(numberOfDirectors);
+                            for (int j = 0; j < numberOfActors; j++)
+                            {
+                                actorInfo = sr.ReadLine().Split(" ");
+                                Actors.Add(new Actor(actorInfo[0], DateTime.Parse(actorInfo[1])));
+                            }
+                            for (int j = 0; j < numberOfDirectors; j++)
+                            {
+                                directorInfo = sr.ReadLine().Split(" ");
+                                Directors.Add(new Director(directorInfo[0], DateTime.Parse(directorInfo[1])));
+                            }
+                            switch (category)
+                            {
+                                case "horror":
+                                    vb.AddFilm(new HorrorFilm(nameOfTheFilm, country, dateOfCreation, Actors, Directors));
+                                    break;
+                                case "comedy":
+                                    vb.AddFilm(new ComedyFilm(nameOfTheFilm, country, dateOfCreation, Actors, Directors));
+                                    break;
+                                case "action":
+                                    vb.AddFilm(new ComedyFilm(nameOfTheFilm, country, dateOfCreation, Actors, Directors));
+                                    break;
+                            }
+                            sr.ReadLine();
                         }
-                        for (int j = 0; j < numberOfDirectors; j++)
-                        {
-                            directorInfo = sr.ReadLine().Split(" ");
-                            Directors.Add(new Director(directorInfo[0], DateTime.Parse(directorInfo[1])));
-                        }
-                        switch (category)
-                        {
-                            case "horror":
-                                vb.AddFilm(new HorrorFilm(nameOfTheFilm, country, dateOfCreation, Actors, Directors));
-                                break;
-                            case "comedy":
-                                vb.AddFilm(new ComedyFilm(nameOfTheFilm, country, dateOfCreation, Actors, Directors));
-                                break;
-                            case "action":
-                                vb.AddFilm(new ComedyFilm(nameOfTheFilm, country, dateOfCreation, Actors, Directors));
-                                break;
-                        }
-                        sr.ReadLine();
                     }
+                    MakeBackup(vb);
+                    return vb;
                 }
-                MakeBackup(vb);
-                return vb;
             }
                 
             catch (Exception e)
             {
+                bool isLocked = false;
+                Monitor.Enter(lockObj, ref isLocked);
                 Console.WriteLine($"Error in reading video library: \"{e.Message}\" so the library is backuped");
                 UpdateRecords(GetBackup());
+                if (isLocked)
+                    Monitor.Exit(lockObj);
                 return GetBackup();
             }
         }
@@ -127,8 +146,10 @@ namespace MainProject.DB
         }
         public void EraseBD()
         {
+            bool isLocked = false;
             try
             {
+                Monitor.Enter(lockObj, ref isLocked);
                 if (File.Exists(pathToCurrentBD))
                 {
                     File.Delete(pathToCurrentBD);
@@ -142,78 +163,92 @@ namespace MainProject.DB
             {
                 Console.WriteLine($"There is no files to delete: \"{ex.Message}\"");
             }
+            finally
+            {
+                if (isLocked)
+                    Monitor.Exit(lockObj);
+            }
           
         }
         public VideoLibrary GetBackup()
         {
-            VideoLibrary vb;
-            Film film;
-            List<Actor> theActors = new();
-            List<Director> theDirectors = new();
-            string  filmString ;
-            using (var sr = new StreamReader(pathToBackup, Encoding.Default))
+            bool isLocked = false;
+            try
             {
-                vb = new VideoLibrary(JsonSerializer.Deserialize<VideoLibrary>(sr.ReadLine()));
-                for (int i = 0; i < vb.NumberOfFilms; i++)
+                Monitor.Enter(lockObj, ref isLocked);
+                VideoLibrary vb;
+                Film film;
+                List<Actor> theActors = new();
+                List<Director> theDirectors = new();
+                string filmString;
+                using (var sr = new StreamReader(pathToBackup, Encoding.Default))
                 {
-                    filmString = sr.ReadLine();
-                    if (filmString.StartsWith("{\"Category\":\"horror"))
+                    vb = new VideoLibrary(JsonSerializer.Deserialize<VideoLibrary>(sr.ReadLine()));
+                    for (int i = 0; i < vb.NumberOfFilms; i++)
                     {
-                        film = JsonSerializer.Deserialize<HorrorFilm>(filmString);
-                        for (int j = 0; j < film.NumberOfActors; j++)
+                        filmString = sr.ReadLine();
+                        if (filmString.StartsWith("{\"Category\":\"horror"))
                         {
-                            theActors.Add(JsonSerializer.Deserialize<Actor>(sr.ReadLine()));
+                            film = JsonSerializer.Deserialize<HorrorFilm>(filmString);
+                            vb.Films.Add(i, new HorrorFilm(DeserializeTheFilm(film, sr)));
                         }
-                        film.ChangeActorsInfo(theActors);
-                        for (int j = 0; j < film.NumberOfDirectors; j++)
+                        else if (filmString.StartsWith("{\"Category\":\"comedy"))
                         {
-                            theDirectors.Add(JsonSerializer.Deserialize<Director>(sr.ReadLine()));
+                            film = JsonSerializer.Deserialize<ComedyFilm>(filmString);
+                            vb.Films.Add(i, new ComedyFilm(DeserializeTheFilm(film, sr)));
                         }
-                        film.ChangeDirectorsInfo(theDirectors);
-                        vb.Films.Add(i, new HorrorFilm(film));
+                        else if (filmString.StartsWith("{\"Category\":\"action"))
+                        {
+                            film = JsonSerializer.Deserialize<ActionFilm>(filmString);
+                            vb.Films.Add(i, new ActionFilm(DeserializeTheFilm(film, sr)));
+                        }
+                        else
+                        {
+                            throw new JsonException("There is no such category of film");
+                        }
                     }
-                    else if (filmString.StartsWith("{\"Category\":\"comedy"))
-                    {
-                        film = JsonSerializer.Deserialize<ComedyFilm>(filmString);
-                        for (int j = 0; j < film.NumberOfActors; j++)
-                        {
-                            theActors.Add(JsonSerializer.Deserialize<Actor>(sr.ReadLine()));
-                        }
-                        film.ChangeActorsInfo(theActors);
-                        for (int j = 0; j < film.NumberOfDirectors; j++)
-                        {
-                            theDirectors.Add(JsonSerializer.Deserialize<Director>(sr.ReadLine()));
-                        }
-                        film.ChangeDirectorsInfo(theDirectors);
-                        vb.Films.Add(i, new ComedyFilm(film));
-                    }
-                    else if (filmString.StartsWith("{\"Category\":\"action"))
-                    {
-                        film = JsonSerializer.Deserialize<ActionFilm>(filmString);
-                        for (int j = 0; j < film.NumberOfActors; j++)
-                        {
-                            theActors.Add(JsonSerializer.Deserialize<Actor>(sr.ReadLine()));
-                        }
-                        film.ChangeActorsInfo(theActors);
-                        for (int j = 0; j < film.NumberOfDirectors; j++)
-                        {
-                            theDirectors.Add(JsonSerializer.Deserialize<Director>(sr.ReadLine()));
-                        }
-                        film.ChangeDirectorsInfo(theDirectors);
-                        vb.Films.Add(i, new ActionFilm(film));
-                    }
-                    else
-                    {
-                        throw new JsonException("There is no such category of film");
-                    }
-                }              
+                }
+                return vb;
             }
-            return vb;
+            finally
+            {
+                if (isLocked)
+                    Monitor.Exit(lockObj);
+            }
         }
-
+        private Film DeserializeTheFilm(Film film, StreamReader sr)
+        {
+            bool isLocked = false;
+            try
+            {
+                Monitor.Enter(lockObj, ref isLocked);
+                List<Actor> theActors = new();
+                List<Director> theDirectors = new();
+                for (int j = 0; j < film.NumberOfActors; j++)
+                {
+                    theActors.Add(JsonSerializer.Deserialize<Actor>(sr.ReadLine()));
+                }
+                film.ChangeActorsInfo(theActors);
+                for (int j = 0; j < film.NumberOfDirectors; j++)
+                {
+                    theDirectors.Add(JsonSerializer.Deserialize<Director>(sr.ReadLine()));
+                }   
+                film.ChangeDirectorsInfo(theDirectors);
+                return film;
+            }
+            finally
+            {
+                if (isLocked)
+                    Monitor.Exit(lockObj);
+            }
+        }
         private void MakeBackup(VideoLibrary vb)
         {
-            StringBuilder jsonString = new(JsonSerializer.Serialize<VideoLibrary>(vb));
+            bool isLocked = false;
+            try
+            {
+                Monitor.Enter(lockObj, ref isLocked);
+                StringBuilder jsonString = new(JsonSerializer.Serialize<VideoLibrary>(vb));
             Console.WriteLine(jsonString);
             foreach (var film in vb.Films)
             {
@@ -231,6 +266,12 @@ namespace MainProject.DB
                 }
             } 
             File.WriteAllText(pathToBackup, jsonString.ToString());
+            }
+            finally
+            {
+                if (isLocked)
+                    Monitor.Exit(lockObj);
+            }
         }
         private void FillToFilmInfo(string[] data, ref string category, ref string nameOfTheFilm, ref string country, ref int numberOfActors, ref int numberOfDirectors, ref DateTime dateOfCreation)
         {
@@ -249,8 +290,10 @@ namespace MainProject.DB
         }
         public bool FilmExists(Film film)
         {
+            bool isLocked = false;
             try
             {
+                Monitor.Enter(lockObj, ref isLocked);
                 bool isFound = false;
                 string nameOfTheFilm = "", country = "", category = "";
                 int numberOfActors = 0, numberOfDirectors = 0;
@@ -305,21 +348,37 @@ namespace MainProject.DB
                     }
                 }
                 return false;
+
             }
             catch (Exception ex)
             {
                 throw new Exception(ex.Message);
             }
+            finally
+            {
+                if (isLocked)
+                    Monitor.Exit(lockObj);
+            }
         }
         private string MakeFileName(string fileName, string ending)
         {
-            if (!Regex.IsMatch(fileName, $@"\w *{ending}$"))
+            bool isLocked = false;
+            try
             {
-                fileName += $@"{ending}";
+                Monitor.Enter(lockObj, ref isLocked);
+                if (!Regex.IsMatch(fileName, $@"\w *{ending}$"))
+                {
+                    fileName += $@"{ending}";
+                }
+                var pathToCurrentBDOfTheDB = new StringBuilder();
+                pathToCurrentBDOfTheDB.Append(fileName);
+                return pathToCurrentBDOfTheDB.ToString();
             }
-            var pathToCurrentBDOfTheDB = new StringBuilder();
-            pathToCurrentBDOfTheDB.Append(fileName);
-            return pathToCurrentBDOfTheDB.ToString();
+            finally
+            {
+                if (isLocked)
+                    Monitor.Exit(lockObj);
+            }
         }
     }
     
