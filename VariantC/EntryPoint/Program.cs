@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using MainProject;
 using MainProject.DB;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Threading;
 
@@ -14,9 +15,7 @@ namespace MainProject.EntryPoint
         {
             try
             {
-                new Thread(First).Start();
-                new Thread(Second).Start();
-                new Thread(Third).Start();
+                First();
             }
             catch(Exception ex)
             {

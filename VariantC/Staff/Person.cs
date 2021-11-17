@@ -1,14 +1,20 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 using System.Collections.Generic;
 
 namespace MainProject
 {
     public abstract class Person : IComparable<Person>
     {
+        [NonSerialized]
         object lockObj = new object();
-        public abstract string Category { get;}
+        [NonSerialized]
         private DateTime _dateOfBirth;
+        [NonSerialized]
         private string _name;
+        [JsonPropertyName("category")]
+        public abstract string Category { get; }
+        [JsonPropertyName("name")]
         public string Name
         {
             get => _name;
@@ -24,6 +30,7 @@ namespace MainProject
                 }
             }
         }
+        [JsonPropertyName("dateOfBirth")]
         public DateTime DateOfBirth 
         {
             get

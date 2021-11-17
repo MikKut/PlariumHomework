@@ -8,10 +8,10 @@ namespace MainProject
     class VideoLibrary
     {
         private object lockObj = new object();
+        private int _numberOfFilms;
         public delegate void RatingEventHandler(RatingEventArguments args, Film film);
         public event RatingEventHandler OnRating;
         public Dictionary<int, Film> Films;
-        private int _numberOfFilms;
 
         public int NumberOfFilms
         {
@@ -43,7 +43,7 @@ namespace MainProject
             this.NumberOfFilms = vb.NumberOfFilms;
             SubscribeAtRating();
         }
-        public void RateTheFilm(double rate, Film film)
+        public void RateTheFilm(in double rate, Film film)
         {
             if (!this.FilmExists(film))
             {
@@ -62,7 +62,7 @@ namespace MainProject
         }
         private void SetRate(RatingEventArguments args, Film film)
         {
-            film.RateTheFilm(args.TotalRating);
+            film.AddRating(args.TotalRating);
         }
         public void AddFilm(Film theFilm)
         {
@@ -157,7 +157,7 @@ namespace MainProject
                 Console.WriteLine($"Wrong input data: \"{ex.Message}\"");
             }
         }
-        public bool FilmExists(Film theFilm)
+        public bool FilmExists(in Film theFilm)
         {
             if (NumberOfFilms == 0)
             {
@@ -202,7 +202,7 @@ namespace MainProject
                 Console.WriteLine("There is no such film");
             }
         }
-        public void FindActorsWhoWasAsMinimumInNFilms(int numberOfFilms)
+        public void FindActorsWhoWasAsMinimumInNFilms(in int numberOfFilms)
         {
             lock (lockObj)
             {
@@ -270,7 +270,7 @@ namespace MainProject
                 DisplayActorsWhoWasDirectorInAnyOfTheFilms(listOfAllActors, listOfAllDirectors);
             }
         }
-        private void DisplayActorsWhoWasDirectorInAnyOfTheFilms(List<Actor> sortedListOfAllActors, List<Director> sortedListOfAllDirectors )
+        private void DisplayActorsWhoWasDirectorInAnyOfTheFilms(in List<Actor> sortedListOfAllActors, List<Director> sortedListOfAllDirectors )
         {
             lock (lockObj)
             {

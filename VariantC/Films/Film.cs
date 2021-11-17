@@ -2,37 +2,39 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using System.Text.Json.Serialization;
+using System.Runtime.Serialization;
 namespace MainProject
 {
     [Serializable]
     abstract internal class Film
     {
+        [NonSerialized]
         object lockObj = new object();
         public delegate void DisplayStaffInformation();
-        public abstract string Category { get; }
+        [NonSerialized]
         private const double MinRating = 0, MaxRating = 10;
+        [NonSerialized]
         private string _name, _country;
+        [NonSerialized]
         public List<Actor> Actors;
+        [NonSerialized]
         public List<Director> Directors;
+        [NonSerialized]
         private int _numberOfActors, _numberOfDirectors, _numberOfRates;
+        [NonSerialized]
+        private DateTime _dateOfCreation;
+        [NonSerialized]
         private double _totalRating;
-        public double TotalRating
+        [JsonPropertyName("category")]
+        public abstract string Category { get; }
+        [JsonPropertyName("dateOfCreation")]
+        public DateTime DateOfCreation
         {
-            get => _totalRating;
-            private set
-            {
-                if (value < MinRating || value > MaxRating)
-                {
-                    throw new ArgumentException("Wrong rating");
-                }
-                _totalRating = value; 
-            }
+            get => _dateOfCreation;
+            set => _dateOfCreation = value;
         }
-        public void AddRating(double rate)
-        {
-            TotalRating = (TotalRating + rate) / ++_numberOfRates;
-        }
-        public DateTime DateOfCreation { get; set; }
+        [JsonPropertyName("name")]
         public string Name
         {
             get => _name;
@@ -48,7 +50,8 @@ namespace MainProject
                 }
             }
         }
-        public string Country 
+        [JsonPropertyName("country")]
+        public string Country
         {
             get => _country;
             set
@@ -63,21 +66,23 @@ namespace MainProject
                 }
             }
         }
+        [JsonPropertyName("numberOfActors")]
         public int NumberOfActors
         {
             get => _numberOfActors;
-            set 
+            set
             {
                 if (value <= 0)
                 {
                     throw new Exception($"number of Actors in film \"{Name}\" less than 1");
                 }
-                else 
+                else
                 {
                     _numberOfActors = value;
                 }
             }
         }
+        [JsonPropertyName("numberOfDirectors")]
         public int NumberOfDirectors
         {
             get => _numberOfDirectors;
@@ -93,6 +98,24 @@ namespace MainProject
                 }
             }
         }
+        [JsonPropertyName("totalRating")]
+        public double TotalRating
+        {
+            get => _totalRating;
+            set
+            {
+                if (value < MinRating || value > MaxRating)
+                {
+                    throw new ArgumentException("Wrong rating");
+                }
+                _totalRating = value; 
+            }
+        }
+        public void AddRating(double rate)
+        {
+            TotalRating = (TotalRating + rate) / ++_numberOfRates;
+        }
+
         public Film(string name, string country, DateTime dateOfCreation, List<Actor> arrayOfActors, List<Director> arrayOfDirectors)
         {
             Name = name;
@@ -172,18 +195,6 @@ namespace MainProject
                 del();
             }
         }
-        public void ChangeActorsInfo(List<Actor> newActors)
-        {
-            Actors = newActors;
-        }
-        public void ChangeDirectorsInfo(List<Director> newDirectors)
-        {
-            Directors = newDirectors;
-        }
-        public void RateTheFilm(double mark)
-        {
-            TotalRating = mark;
-        }
         private void SetDefaultValueToLists()
         {
             Actors = new List<Actor>();
@@ -201,7 +212,8 @@ namespace MainProject
                         throw new Exception($"Number of {category}s is wrong of film {Name}");
                     }
                     return temp;
-                }            }
+                }
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"Wrong input data: \"{ex.Message}\", try again");
@@ -220,7 +232,8 @@ namespace MainProject
                         throw new Exception($"Wrong date of creation of film {Name}");
                     }
                     return temp;
-                }            }
+                }
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"Wrong input data: \"{ex.Message}\", try again");

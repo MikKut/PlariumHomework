@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace MainProject.DB
@@ -15,7 +13,13 @@ namespace MainProject.DB
         static object lockObj = new object();
         string pathToCurrentBD;
         string pathToBackup;
-        public DataBase(string thepathToCurrentBD)
+        enum FilmType
+        {
+            ActionFilm = 1,
+            ComedyFilm = 2,
+            HorrorFilm = 3
+        };
+        public DataBase(in string thepathToCurrentBD)
         {
             lock (lockObj)
             {
@@ -33,7 +37,7 @@ namespace MainProject.DB
             CreateRecords(new VideoLibrary());
         }
        
-        public void CreateRecords(VideoLibrary vb)
+        public void CreateRecords(in VideoLibrary vb)
         {          
             try
             {
@@ -130,7 +134,7 @@ namespace MainProject.DB
                 return GetBackup();
             }
         }
-        public void UpdateRecords(VideoLibrary vb) 
+        public void UpdateRecords(in VideoLibrary vb) 
         {
              try 
              {
@@ -187,20 +191,20 @@ namespace MainProject.DB
                     for (int i = 0; i < vb.NumberOfFilms; i++)
                     {
                         filmString = sr.ReadLine();
-                        if (filmString.StartsWith("{\"Category\":\"horror"))
+                        if (filmString.StartsWith("{\"category\":\"horror"))
                         {
                             film = JsonSerializer.Deserialize<HorrorFilm>(filmString);
-                            vb.Films.Add(i, new HorrorFilm(DeserializeTheFilm(film, sr)));
+                            vb.Films.Add(i, DeserializeTheFilm(film, sr, FilmType.HorrorFilm));
                         }
-                        else if (filmString.StartsWith("{\"Category\":\"comedy"))
+                        else if (filmString.StartsWith("{\"category\":\"comedy"))
                         {
                             film = JsonSerializer.Deserialize<ComedyFilm>(filmString);
-                            vb.Films.Add(i, new ComedyFilm(DeserializeTheFilm(film, sr)));
+                            vb.Films.Add(i, DeserializeTheFilm(film, sr, FilmType.ComedyFilm));
                         }
-                        else if (filmString.StartsWith("{\"Category\":\"action"))
+                        else if (filmString.StartsWith("{\"category\":\"action"))
                         {
                             film = JsonSerializer.Deserialize<ActionFilm>(filmString);
-                            vb.Films.Add(i, new ActionFilm(DeserializeTheFilm(film, sr)));
+                            vb.Films.Add(i, DeserializeTheFilm(film, sr, FilmType.ActionFilm));
                         }
                         else
                         {
@@ -216,7 +220,7 @@ namespace MainProject.DB
                     Monitor.Exit(lockObj);
             }
         }
-        private Film DeserializeTheFilm(Film film, StreamReader sr)
+        private Film DeserializeTheFilm(in Film film, StreamReader sr,in FilmType filmType)
         {
             bool isLocked = false;
             try
@@ -228,13 +232,21 @@ namespace MainProject.DB
                 {
                     theActors.Add(JsonSerializer.Deserialize<Actor>(sr.ReadLine()));
                 }
-                film.ChangeActorsInfo(theActors);
                 for (int j = 0; j < film.NumberOfDirectors; j++)
                 {
                     theDirectors.Add(JsonSerializer.Deserialize<Director>(sr.ReadLine()));
                 }   
-                film.ChangeDirectorsInfo(theDirectors);
-                return film;
+                switch (filmType)
+                {
+                    case FilmType.HorrorFilm:
+                        return new HorrorFilm(film.Name, film.Country, film.DateOfCreation, theActors, theDirectors);
+                    case FilmType.ComedyFilm:
+                        return new ComedyFilm(film.Name, film.Country, film.DateOfCreation, theActors, theDirectors);
+                    case FilmType.ActionFilm:
+                        return new ActionFilm(film.Name, film.Country, film.DateOfCreation, theActors, theDirectors);
+                    default:
+                        throw new ArgumentException("There is no such category of films in  video library");
+                }
             }
             finally
             {
@@ -242,17 +254,16 @@ namespace MainProject.DB
                     Monitor.Exit(lockObj);
             }
         }
-        private void MakeBackup(VideoLibrary vb)
+        private void MakeBackup(in VideoLibrary vb)
         {
             bool isLocked = false;
             try
             {
-                Monitor.Enter(lockObj, ref isLocked);
-                StringBuilder jsonString = new(JsonSerializer.Serialize<VideoLibrary>(vb));
-            Console.WriteLine(jsonString);
+            Monitor.Enter(lockObj, ref isLocked);
+            StringBuilder jsonString = new(JsonSerializer.Serialize<VideoLibrary>(vb));
             foreach (var film in vb.Films)
             {
-                jsonString.Append('\n');
+                jsonString.Append('\n');    
                 jsonString.Append(JsonSerializer.Serialize(film.Value));
                 foreach (var actor in film.Value.Actors)
                 {

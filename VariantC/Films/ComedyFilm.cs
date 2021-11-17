@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 using System.Collections.Generic;
 namespace MainProject
 {
     [Serializable]
     internal class ComedyFilm : Film
     {
-        public override string Category { get => "comedy"; }
+        private readonly string _category = "comedy";
+        [JsonPropertyName("category")]
+        public override string Category { get => _category; }
         public ComedyFilm() : base()
         {
         }

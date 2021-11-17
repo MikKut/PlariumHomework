@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 using System.Collections.Generic;
 
 namespace MainProject
@@ -6,7 +7,10 @@ namespace MainProject
     [Serializable]
     internal class HorrorFilm : Film
     {
-        public override string Category { get => "horror"; }
+        [NonSerialized]
+        private readonly string _category = "horror";
+        [JsonPropertyName("category")]
+        public override string Category { get => _category; }
         public HorrorFilm() : base()
         {
 
